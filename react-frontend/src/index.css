@@ -1,0 +1,4 @@
+/* Se redefine en App.css, pero aseguramos un lienzo limpio aquí */
+body {
+  margin: 0;
+}
