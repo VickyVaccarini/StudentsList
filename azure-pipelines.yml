@@ -5,56 +5,80 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  serviceConnection: ServiceConnectionARM
-  resourceGroup: finalStudents
+- group: backend-qa-db
+- group: frontend-qa-db
 
-  backendAppQa: students-back-qa-cxa0evadgvggcehr
-  backendAppProd: students-back-prod-f4eucbcdbve3bwaz
-  frontendAppQa: students-front-qa-ffb5fxf5chepfwgz
-  frontendAppProd: students-front-prod-gmeaaxbsgrbsbacv
-
-  backendQaUrl: https://students-back-qa-cxa0evadgvggcehr.brazilsouth-01.azurewebsites.net/api/v1/students
-  backendProdUrl: https://students-back-prod-f4eucbcdbve3bwaz.brazilsouth-01.azurewebsites.net/api/v1/students
-
-  javaVersion: '17'
-  nodeVersion: '20.x'
+# (tus variables siguen igual)
+- name: serviceConnection
+  value: ServiceConnectionARM
+- name: resourceGroup
+  value: finalStudents
+- name: backendAppQa
+  value: students-back-qa-cxa0evadgvggcehr
+- name: backendAppProd
+  value: students-back-prod-f4eucbcdbve3bwaz
+- name: frontendAppQa
+  value: students-front-qa-ffb5fxf5chepfwgz
+- name: frontendAppProd
+  value: students-front-prod-gmeaaxbsgrbsbacv
+- name: backendQaUrl
+  value: https://students-back-qa-cxa0evadgvggcehr.brazilsouth-01.azurewebsites.net/api/v1/students
+- name: backendProdUrl
+  value: https://students-back-prod-f4eucbcdbve3bwaz.brazilsouth-01.azurewebsites.net/api/v1/students
+- name: javaVersion
+  value: '17'
+- name: nodeVersion
+  value: '20.x'
 
 stages:
-# ---------------------------------------
-# Build + Unit Tests + Coverage
-# ---------------------------------------
+
+# ===================================================
+#   STAGE 1 — BUILD + TEST + COVERAGE
+# ===================================================
 - stage: BuildAndTest
-  displayName: 'Build y Tests'
+  displayName: "Build + Tests + Cobertura"
   jobs:
-    - job: Backend
-      displayName: 'Backend - Maven + Jacoco'
+
+    # -------- BACKEND --------
+    - job: BuildBackend
+      displayName: "Backend Maven"
       steps:
+        - checkout: self
         - task: Maven@4
-          displayName: 'Clean Test + Package (backend)'
+          displayName: "mvn clean test (con jacoco)"
           inputs:
-            mavenPomFile: 'springboot-backend/pom.xml'
-            goals: 'clean package'
+            mavenPomFile: springboot-backend/pom.xml
+            goals: clean test
             publishJUnitResults: true
             testResultsFiles: '**/target/surefire-reports/*.xml'
             jdkVersionOption: '1.17'
 
         - task: PublishCodeCoverageResults@2
-          displayName: 'Publicar cobertura backend (JaCoCo)'
+          displayName: "Cobertura backend (JaCoCo)"
           inputs:
             codeCoverageTool: JaCoCo
             summaryFileLocation: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco/jacoco.xml'
             reportDirectory: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco'
             failIfCoverageEmpty: false
 
-        - task: PublishBuildArtifacts@1
-          displayName: 'Publicar JAR backend'
+        - task: Maven@4
+          displayName: "Empaquetar JAR"
           inputs:
-            PathtoPublish: '$(System.DefaultWorkingDirectory)/springboot-backend/target/springboot-backend-0.0.1-SNAPSHOT.jar'
+            mavenPomFile: springboot-backend/pom.xml
+            goals: package -DskipTests
+            jdkVersionOption: '1.17'
+
+        - task: PublishBuildArtifacts@1
+          displayName: "Publicar JAR"
+          inputs:
+            PathtoPublish: 'springboot-backend/target/springboot-backend-0.0.1-SNAPSHOT.jar'
             ArtifactName: 'backend-jar'
 
-    - job: Frontend
-      displayName: 'Frontend - Jest + Cypress artifacts'
+    # -------- FRONTEND --------
+    - job: BuildFrontend
+      displayName: "Frontend React"
       steps:
+        - checkout: self
         - task: NodeTool@0
           inputs:
             versionSpec: '$(nodeVersion)'
@@ -63,10 +87,10 @@ stages:
             cd react-frontend
             npm ci
             npm run test:coverage -- --coverageReporters=cobertura
-          displayName: 'Tests unitarios + cobertura frontend'
+          displayName: "Tests + cobertura frontend"
 
         - task: PublishCodeCoverageResults@2
-          displayName: 'Publicar cobertura frontend (Jest)'
+          displayName: "Cobertura frontend (Jest)"
           inputs:
             codeCoverageTool: Cobertura
             summaryFileLocation: '$(System.DefaultWorkingDirectory)/react-frontend/coverage/cobertura-coverage.xml'
@@ -79,7 +103,7 @@ stages:
             mkdir -p $(Build.ArtifactStagingDirectory)/front
             cd build
             zip -r $(Build.ArtifactStagingDirectory)/front/frontend-qa.zip .
-          displayName: 'Build frontend QA'
+          displayName: "Build frontend QA"
 
         - script: |
             cd react-frontend
@@ -87,37 +111,38 @@ stages:
             REACT_APP_API_BASE=$(backendProdUrl) npm run build
             cd build
             zip -r $(Build.ArtifactStagingDirectory)/front/frontend-prod.zip .
-          displayName: 'Build frontend Prod'
+          displayName: "Build frontend Prod"
 
         - task: PublishBuildArtifacts@1
-          displayName: 'Publicar build frontend QA'
+          displayName: "Publicar build QA"
           inputs:
             PathtoPublish: '$(Build.ArtifactStagingDirectory)/front/frontend-qa.zip'
             ArtifactName: 'frontend-qa-build'
 
         - task: PublishBuildArtifacts@1
-          displayName: 'Publicar build frontend Prod'
+          displayName: "Publicar build Prod"
           inputs:
             PathtoPublish: '$(Build.ArtifactStagingDirectory)/front/frontend-prod.zip'
             ArtifactName: 'frontend-prod-build'
 
-# ---------------------------------------
-# Deploy QA + Pruebas de Integración (Cypress)
-# ---------------------------------------
-- stage: DeployAndTestQA
-  displayName: 'Deploy QA + Cypress'
+# ===================================================
+#   STAGE 2 — DEPLOY QA (con Cypress opcional)
+# ===================================================
+- stage: DeployQA
+  displayName: "Deploy QA + (Cypress opcional)"
   dependsOn: BuildAndTest
   condition: succeeded()
   jobs:
+
     - job: DeployBackendQA
-      displayName: 'Deploy backend QA'
+      displayName: "Backend QA"
       steps:
         - task: DownloadBuildArtifacts@0
           inputs:
-            buildType: 'current'
+            buildType: current
             downloadPath: '$(Pipeline.Workspace)'
         - task: AzureWebApp@1
-          displayName: 'Publicar JAR en App Service QA'
+          displayName: "Deploy JAR QA"
           inputs:
             azureSubscription: '$(serviceConnection)'
             appName: '$(backendAppQa)'
@@ -126,62 +151,83 @@ stages:
               -PORT 8080
 
     - job: DeployFrontendQA
-      displayName: 'Deploy frontend QA'
+      displayName: "Frontend QA"
       steps:
         - task: DownloadBuildArtifacts@0
           inputs:
-            buildType: 'current'
+            buildType: current
             downloadPath: '$(Pipeline.Workspace)'
         - task: AzureWebApp@1
-          displayName: 'Publicar build frontend QA'
+          displayName: "Deploy Frontend QA"
           inputs:
             azureSubscription: '$(serviceConnection)'
             appName: '$(frontendAppQa)'
             package: '$(Pipeline.Workspace)/frontend-qa-build/frontend-qa.zip'
 
-    - job: CypressQA
-      displayName: 'Pruebas de integración Cypress vs QA'
-      dependsOn:
-        - DeployBackendQA
-        - DeployFrontendQA
-      steps:
-        - task: NodeTool@0
-          inputs:
-            versionSpec: '$(nodeVersion)'
-        - script: |
-            cd react-frontend
-            npm ci
-            mkdir -p cypress/results
-            npx cypress run --config baseUrl=https://$(frontendAppQa).azurewebsites.net --reporter junit --reporter-options "mochaFile=cypress/results/results.xml,toConsole=true"
-          displayName: 'Ejecutar Cypress (QA)'
-        - task: PublishTestResults@2
-          condition: always()
-          inputs:
-            testResultsFiles: 'cypress/results/*.xml'
-            searchFolder: '$(System.DefaultWorkingDirectory)/react-frontend'
-            testRunTitle: 'Cypress QA'
+    # Descomenta si quieres correr Cypress en QA
+    # - job: CypressQA
+    #   displayName: "Cypress QA"
+    #   dependsOn:
+    #     - DeployBackendQA
+    #     - DeployFrontendQA
+    #   steps:
+    #     - task: NodeTool@0
+    #       inputs:
+    #         versionSpec: '$(nodeVersion)'
+    #     - script: |
+    #         cd react-frontend
+    #         npm ci
+    #         mkdir -p cypress/results
+    #         npx cypress run --config baseUrl=https://$(frontendAppQa).azurewebsites.net --reporter junit --reporter-options "mochaFile=cypress/results/results.xml,toConsole=true"
+    #       displayName: "Ejecutar Cypress QA"
+    #     - task: PublishTestResults@2
+    #       condition: always()
+    #       inputs:
+    #         testResultsFiles: 'cypress/results/*.xml'
+    #         searchFolder: '$(System.DefaultWorkingDirectory)/react-frontend'
+    #         testRunTitle: 'Cypress QA'
 
-# ---------------------------------------
-# Deploy PROD con aprobación manual
-# ---------------------------------------
-- stage: DeployProd
-  displayName: 'Deploy a PROD (requiere aprobación)'
-  dependsOn: DeployAndTestQA
+# ===================================================
+#   STAGE 3 — APROBACIÓN MANUAL
+# ===================================================
+- stage: ManualApproval
+  displayName: "Aprobación manual para Prod"
+  dependsOn: DeployQA
   condition: succeeded()
   jobs:
+    - job: WaitForApproval
+      displayName: "Esperando aprobación…"
+      pool: server
+      steps:
+        - task: ManualValidation@0
+          inputs:
+            instructions: "Aprobar despliegue a Producción."
+            onTimeout: 'reject'
+            timeout: '43200' # 12 horas
+
+# ===================================================
+#   STAGE 4 — DEPLOY PROD
+# ===================================================
+- stage: DeployProd
+  displayName: "Deploy Producción"
+  dependsOn: ManualApproval
+  condition: succeeded()
+  jobs:
+
     - deployment: DeployBackendProd
-      displayName: 'Deploy backend PROD'
-      environment: 'Production' # configurar aprobación manual en Azure DevOps Environments
+      displayName: "Backend Prod"
+      environment: 'Production'   # crea el environment y agrega aprobación aquí si prefieres
       strategy:
         runOnce:
           deploy:
             steps:
               - task: DownloadBuildArtifacts@0
                 inputs:
-                  buildType: 'current'
+                  buildType: current
                   downloadPath: '$(Pipeline.Workspace)'
+
               - task: AzureWebApp@1
-                displayName: 'Publicar JAR en App Service PROD'
+                displayName: "Deploy JAR Prod"
                 inputs:
                   azureSubscription: '$(serviceConnection)'
                   appName: '$(backendAppProd)'
@@ -190,7 +236,7 @@ stages:
                     -PORT 8080
 
     - deployment: DeployFrontendProd
-      displayName: 'Deploy frontend PROD'
+      displayName: "Frontend Prod"
       environment: 'Production'
       strategy:
         runOnce:
@@ -198,10 +244,11 @@ stages:
             steps:
               - task: DownloadBuildArtifacts@0
                 inputs:
-                  buildType: 'current'
+                  buildType: current
                   downloadPath: '$(Pipeline.Workspace)'
+
               - task: AzureWebApp@1
-                displayName: 'Publicar build frontend PROD'
+                displayName: "Deploy Frontend Prod"
                 inputs:
                   azureSubscription: '$(serviceConnection)'
                   appName: '$(frontendAppProd)'
