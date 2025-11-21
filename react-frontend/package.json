@@ -18,6 +18,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage --watch=false",
+    "cypress:run": "cypress run --browser chrome",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

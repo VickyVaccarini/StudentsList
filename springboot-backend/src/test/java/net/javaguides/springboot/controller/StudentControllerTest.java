@@ -1,4 +1,4 @@
-﻿package net.javaguides.springboot.controller;
+package net.javaguides.springboot.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
