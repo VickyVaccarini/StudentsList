@@ -8,7 +8,6 @@ variables:
 - group: backend-qa-db
 - group: frontend-qa-db
 
-# (tus variables siguen igual)
 - name: serviceConnection
   value: ServiceConnectionARM
 - name: resourceGroup

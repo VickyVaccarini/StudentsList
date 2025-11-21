@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +29,7 @@ import net.javaguides.springboot.model.Student;
 import net.javaguides.springboot.repository.StudentRepository;
 
 @WebMvcTest(StudentController.class)
+@ActiveProfiles("test")
 class StudentControllerTest {
 
     @Autowired
