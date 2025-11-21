@@ -207,6 +207,11 @@ a {
   color: var(--text);
 }
 
+.form-card .form-control::placeholder {
+  color: #ffffff;
+  opacity: 0.8;
+}
+
 .form-card .form-control:focus {
   background: rgba(255, 255, 255, 0.07);
   border-color: var(--accent);
