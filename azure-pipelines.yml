@@ -20,140 +20,189 @@ variables:
   nodeVersion: '20.x'
 
 stages:
-
-# ---------- Build + Tests + Cobertura ----------
+# ---------------------------------------
+# Build + Unit Tests + Coverage
+# ---------------------------------------
 - stage: BuildAndTest
+  displayName: 'Build y Tests'
   jobs:
     - job: Backend
+      displayName: 'Backend - Maven + Jacoco'
       steps:
         - task: Maven@4
-          displayName: Test + cobertura backend
+          displayName: 'Clean Test + Package (backend)'
           inputs:
-            mavenPomFile: springboot-backend/pom.xml
-            goals: clean test
+            mavenPomFile: 'springboot-backend/pom.xml'
+            goals: 'clean package'
             publishJUnitResults: true
             testResultsFiles: '**/target/surefire-reports/*.xml'
             jdkVersionOption: '1.17'
+
         - task: PublishCodeCoverageResults@2
-          displayName: Cobertura backend (JaCoCo)
+          displayName: 'Publicar cobertura backend (JaCoCo)'
           inputs:
             codeCoverageTool: JaCoCo
-            summaryFileLocation: 'springboot-backend/target/site/jacoco/jacoco.xml'
-            reportDirectory: 'springboot-backend/target/site/jacoco'
+            summaryFileLocation: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco/jacoco.xml'
+            reportDirectory: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco'
             failIfCoverageEmpty: false
+
         - task: PublishBuildArtifacts@1
-          displayName: Publicar JAR backend
+          displayName: 'Publicar JAR backend'
           inputs:
-            PathtoPublish: 'springboot-backend/target/springboot-backend-0.0.1-SNAPSHOT.jar'
-            ArtifactName: backend-jar
+            PathtoPublish: '$(System.DefaultWorkingDirectory)/springboot-backend/target/springboot-backend-0.0.1-SNAPSHOT.jar'
+            ArtifactName: 'backend-jar'
 
     - job: Frontend
+      displayName: 'Frontend - Jest + Cypress artifacts'
       steps:
         - task: NodeTool@0
-          inputs: { versionSpec: $(nodeVersion) }
+          inputs:
+            versionSpec: '$(nodeVersion)'
+
         - script: |
             cd react-frontend
             npm ci
-            npm run test:coverage -- --coverageReporters=text-summary --coverageReporters=cobertura
-          displayName: Test + cobertura frontend
+            npm run test:coverage -- --coverageReporters=cobertura
+          displayName: 'Tests unitarios + cobertura frontend'
+
         - task: PublishCodeCoverageResults@2
-          displayName: Cobertura frontend (Jest)
+          displayName: 'Publicar cobertura frontend (Jest)'
           inputs:
             codeCoverageTool: Cobertura
-            summaryFileLocation: 'react-frontend/coverage/cobertura-coverage.xml'
-            reportDirectory: 'react-frontend/coverage'
+            summaryFileLocation: '$(System.DefaultWorkingDirectory)/react-frontend/coverage/cobertura-coverage.xml'
+            reportDirectory: '$(System.DefaultWorkingDirectory)/react-frontend/coverage'
             failIfCoverageEmpty: false
+
         - script: |
             cd react-frontend
             REACT_APP_API_BASE=$(backendQaUrl) npm run build
-          displayName: Build frontend (QA)
-        - task: ArchiveFiles@2
-          inputs:
-            rootFolderOrFile: 'react-frontend/build'
-            includeRootFolder: false
-            archiveFile: '$(Build.ArtifactStagingDirectory)/frontend-qa.zip'
-        - task: PublishBuildArtifacts@1
-          displayName: Publicar build frontend QA
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/frontend-qa.zip'
-            ArtifactName: frontend-qa-build
+            mkdir -p $(Build.ArtifactStagingDirectory)/front
+            cd build
+            zip -r $(Build.ArtifactStagingDirectory)/front/frontend-qa.zip .
+          displayName: 'Build frontend QA'
 
-# ---------- Deploy QA + Cypress ----------
+        - script: |
+            cd react-frontend
+            rm -rf build
+            REACT_APP_API_BASE=$(backendProdUrl) npm run build
+            cd build
+            zip -r $(Build.ArtifactStagingDirectory)/front/frontend-prod.zip .
+          displayName: 'Build frontend Prod'
+
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publicar build frontend QA'
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/front/frontend-qa.zip'
+            ArtifactName: 'frontend-qa-build'
+
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publicar build frontend Prod'
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/front/frontend-prod.zip'
+            ArtifactName: 'frontend-prod-build'
+
+# ---------------------------------------
+# Deploy QA + Pruebas de Integración (Cypress)
+# ---------------------------------------
 - stage: DeployAndTestQA
+  displayName: 'Deploy QA + Cypress'
   dependsOn: BuildAndTest
+  condition: succeeded()
   jobs:
     - job: DeployBackendQA
+      displayName: 'Deploy backend QA'
       steps:
-        - task: AzureWebApp@1
-          displayName: Deploy backend QA
+        - task: DownloadBuildArtifacts@0
           inputs:
-            azureSubscription: $(serviceConnection)
-            appName: $(backendAppQa)
+            buildType: 'current'
+            downloadPath: '$(Pipeline.Workspace)'
+        - task: AzureWebApp@1
+          displayName: 'Publicar JAR en App Service QA'
+          inputs:
+            azureSubscription: '$(serviceConnection)'
+            appName: '$(backendAppQa)'
             package: '$(Pipeline.Workspace)/backend-jar/springboot-backend-0.0.1-SNAPSHOT.jar'
             appSettings: |
               -PORT 8080
+
     - job: DeployFrontendQA
+      displayName: 'Deploy frontend QA'
       steps:
-        - task: AzureWebApp@1
-          displayName: Deploy frontend QA
+        - task: DownloadBuildArtifacts@0
           inputs:
-            azureSubscription: $(serviceConnection)
-            appName: $(frontendAppQa)
+            buildType: 'current'
+            downloadPath: '$(Pipeline.Workspace)'
+        - task: AzureWebApp@1
+          displayName: 'Publicar build frontend QA'
+          inputs:
+            azureSubscription: '$(serviceConnection)'
+            appName: '$(frontendAppQa)'
             package: '$(Pipeline.Workspace)/frontend-qa-build/frontend-qa.zip'
+
     - job: CypressQA
+      displayName: 'Pruebas de integración Cypress vs QA'
       dependsOn:
         - DeployBackendQA
         - DeployFrontendQA
       steps:
         - task: NodeTool@0
-          inputs: { versionSpec: $(nodeVersion) }
+          inputs:
+            versionSpec: '$(nodeVersion)'
         - script: |
             cd react-frontend
             npm ci
-            npx cypress run --config baseUrl=https://$(frontendAppQa).azurewebsites.net
-          displayName: Ejecutar Cypress vs QA
+            mkdir -p cypress/results
+            npx cypress run --config baseUrl=https://$(frontendAppQa).azurewebsites.net --reporter junit --reporter-options "mochaFile=cypress/results/results.xml,toConsole=true"
+          displayName: 'Ejecutar Cypress (QA)'
         - task: PublishTestResults@2
           condition: always()
           inputs:
-            testResultsFiles: '**/cypress/results/*.xml'
-            searchFolder: 'react-frontend'
+            testResultsFiles: 'cypress/results/*.xml'
+            searchFolder: '$(System.DefaultWorkingDirectory)/react-frontend'
             testRunTitle: 'Cypress QA'
 
-# ---------- Deploy PROD ----------
+# ---------------------------------------
+# Deploy PROD con aprobación manual
+# ---------------------------------------
 - stage: DeployProd
+  displayName: 'Deploy a PROD (requiere aprobación)'
   dependsOn: DeployAndTestQA
   condition: succeeded()
   jobs:
-    - job: DeployBackendProd
-      steps:
-        - task: AzureWebApp@1
-          displayName: Deploy backend PROD
-          inputs:
-            azureSubscription: $(serviceConnection)
-            appName: $(backendAppProd)
-            package: '$(Pipeline.Workspace)/backend-jar/springboot-backend-0.0.1-SNAPSHOT.jar'
-            appSettings: |
-              -PORT 8080
-    - job: DeployFrontendProd
-      steps:
-        - task: NodeTool@0
-          inputs: { versionSpec: $(nodeVersion) }
-        - script: |
-            cd react-frontend
-            npm ci
-            REACT_APP_API_BASE=$(backendProdUrl) npm run build
-        - task: ArchiveFiles@2
-          inputs:
-            rootFolderOrFile: 'react-frontend/build'
-            includeRootFolder: false
-            archiveFile: '$(Build.ArtifactStagingDirectory)/frontend-prod.zip'
-        - task: PublishBuildArtifacts@1
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/frontend-prod.zip'
-            ArtifactName: frontend-prod-build
-        - task: AzureWebApp@1
-          displayName: Deploy frontend PROD
-          inputs:
-            azureSubscription: $(serviceConnection)
-            appName: $(frontendAppProd)
-            package: '$(Pipeline.Workspace)/frontend-prod-build/frontend-prod.zip'
+    - deployment: DeployBackendProd
+      displayName: 'Deploy backend PROD'
+      environment: 'Production' # configurar aprobación manual en Azure DevOps Environments
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: DownloadBuildArtifacts@0
+                inputs:
+                  buildType: 'current'
+                  downloadPath: '$(Pipeline.Workspace)'
+              - task: AzureWebApp@1
+                displayName: 'Publicar JAR en App Service PROD'
+                inputs:
+                  azureSubscription: '$(serviceConnection)'
+                  appName: '$(backendAppProd)'
+                  package: '$(Pipeline.Workspace)/backend-jar/springboot-backend-0.0.1-SNAPSHOT.jar'
+                  appSettings: |
+                    -PORT 8080
+
+    - deployment: DeployFrontendProd
+      displayName: 'Deploy frontend PROD'
+      environment: 'Production'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: DownloadBuildArtifacts@0
+                inputs:
+                  buildType: 'current'
+                  downloadPath: '$(Pipeline.Workspace)'
+              - task: AzureWebApp@1
+                displayName: 'Publicar build frontend PROD'
+                inputs:
+                  azureSubscription: '$(serviceConnection)'
+                  appName: '$(frontendAppProd)'
+                  package: '$(Pipeline.Workspace)/frontend-prod-build/frontend-prod.zip'
