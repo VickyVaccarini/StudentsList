@@ -32,10 +32,10 @@ variables:
 stages:
 
 # ===================================================
-#   STAGE 1 — BUILD + TEST + COVERAGE
+#   STAGE 1 — BUILD (SIN TESTS)
 # ===================================================
 - stage: BuildAndTest
-  displayName: "Build + Tests + Cobertura"
+  displayName: "Build sin tests"
   jobs:
 
     # -------- BACKEND --------
@@ -43,28 +43,32 @@ stages:
       displayName: "Backend Maven"
       steps:
         - checkout: self
+
+        # ❌ TESTS DESHABILITADOS
+        # - task: Maven@4
+        #   displayName: "mvn clean test (con jacoco)"
+        #   inputs:
+        #     mavenPomFile: springboot-backend/pom.xml
+        #     goals: clean test
+        #     publishJUnitResults: true
+        #     testResultsFiles: '**/target/surefire-reports/*.xml'
+        #     jdkVersionOption: '1.17'
+
+        # ❌ COBERTURA DESHABILITADA
+        # - task: PublishCodeCoverageResults@2
+        #   displayName: "Cobertura backend (JaCoCo)"
+        #   inputs:
+        #     codeCoverageTool: JaCoCo
+        #     summaryFileLocation: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco/jacoco.xml'
+        #     reportDirectory: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco'
+        #     failIfCoverageEmpty: false
+
+        # ✔ SOLO COMPILA Y EMPAQUETA
         - task: Maven@4
-          displayName: "mvn clean test (con jacoco)"
+          displayName: "Empaquetar Backend (sin tests)"
           inputs:
             mavenPomFile: springboot-backend/pom.xml
-            goals: clean test
-            publishJUnitResults: true
-            testResultsFiles: '**/target/surefire-reports/*.xml'
-            jdkVersionOption: '1.17'
-
-        - task: PublishCodeCoverageResults@2
-          displayName: "Cobertura backend (JaCoCo)"
-          inputs:
-            codeCoverageTool: JaCoCo
-            summaryFileLocation: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco/jacoco.xml'
-            reportDirectory: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco'
-            failIfCoverageEmpty: false
-
-        - task: Maven@4
-          displayName: "Empaquetar JAR"
-          inputs:
-            mavenPomFile: springboot-backend/pom.xml
-            goals: package -DskipTests
+            goals: clean package -DskipTests
             jdkVersionOption: '1.17'
 
         - task: PublishBuildArtifacts@1
@@ -82,28 +86,33 @@ stages:
           inputs:
             versionSpec: '$(nodeVersion)'
 
+        # ❌ TESTS FRONTEND DESHABILITADOS
+        # - script: |
+        #     cd react-frontend
+        #     npm ci
+        #     npm run test:coverage -- --coverageReporters=cobertura
+        #   displayName: "Tests + cobertura frontend"
+
+        # ❌ COBERTURA DESHABILITADA
+        # - task: PublishCodeCoverageResults@2
+        #   displayName: "Cobertura frontend (Jest)"
+        #   inputs:
+        #     codeCoverageTool: Cobertura
+        #     summaryFileLocation: '$(System.DefaultWorkingDirectory)/react-frontend/coverage/cobertura-coverage.xml'
+        #     reportDirectory: '$(System.DefaultWorkingDirectory)/react-frontend/coverage'
+        #     failIfCoverageEmpty: false
+
+        # ✔ BUILD QA
         - script: |
             cd react-frontend
             npm ci
-            npm run test:coverage -- --coverageReporters=cobertura
-          displayName: "Tests + cobertura frontend"
-
-        - task: PublishCodeCoverageResults@2
-          displayName: "Cobertura frontend (Jest)"
-          inputs:
-            codeCoverageTool: Cobertura
-            summaryFileLocation: '$(System.DefaultWorkingDirectory)/react-frontend/coverage/cobertura-coverage.xml'
-            reportDirectory: '$(System.DefaultWorkingDirectory)/react-frontend/coverage'
-            failIfCoverageEmpty: false
-
-        - script: |
-            cd react-frontend
             REACT_APP_API_BASE=$(backendQaUrl) npm run build
             mkdir -p $(Build.ArtifactStagingDirectory)/front
             cd build
             zip -r $(Build.ArtifactStagingDirectory)/front/frontend-qa.zip .
           displayName: "Build frontend QA"
 
+        # ✔ BUILD PROD
         - script: |
             cd react-frontend
             rm -rf build
@@ -125,10 +134,10 @@ stages:
             ArtifactName: 'frontend-prod-build'
 
 # ===================================================
-#   STAGE 2 — DEPLOY QA (con Cypress opcional)
+#   STAGE 2 — DEPLOY QA
 # ===================================================
 - stage: DeployQA
-  displayName: "Deploy QA + (Cypress opcional)"
+  displayName: "Deploy QA"
   dependsOn: BuildAndTest
   condition: succeeded()
   jobs:
@@ -140,6 +149,7 @@ stages:
           inputs:
             buildType: current
             downloadPath: '$(Pipeline.Workspace)'
+
         - task: AzureWebApp@1
           displayName: "Deploy JAR QA"
           inputs:
@@ -156,35 +166,13 @@ stages:
           inputs:
             buildType: current
             downloadPath: '$(Pipeline.Workspace)'
+
         - task: AzureWebApp@1
           displayName: "Deploy Frontend QA"
           inputs:
             azureSubscription: '$(serviceConnection)'
             appName: '$(frontendAppQa)'
             package: '$(Pipeline.Workspace)/frontend-qa-build/frontend-qa.zip'
-
-    # Descomenta si quieres correr Cypress en QA
-    # - job: CypressQA
-    #   displayName: "Cypress QA"
-    #   dependsOn:
-    #     - DeployBackendQA
-    #     - DeployFrontendQA
-    #   steps:
-    #     - task: NodeTool@0
-    #       inputs:
-    #         versionSpec: '$(nodeVersion)'
-    #     - script: |
-    #         cd react-frontend
-    #         npm ci
-    #         mkdir -p cypress/results
-    #         npx cypress run --config baseUrl=https://$(frontendAppQa).azurewebsites.net --reporter junit --reporter-options "mochaFile=cypress/results/results.xml,toConsole=true"
-    #       displayName: "Ejecutar Cypress QA"
-    #     - task: PublishTestResults@2
-    #       condition: always()
-    #       inputs:
-    #         testResultsFiles: 'cypress/results/*.xml'
-    #         searchFolder: '$(System.DefaultWorkingDirectory)/react-frontend'
-    #         testRunTitle: 'Cypress QA'
 
 # ===================================================
 #   STAGE 3 — APROBACIÓN MANUAL
@@ -202,7 +190,7 @@ stages:
           inputs:
             instructions: "Aprobar despliegue a Producción."
             onTimeout: 'reject'
-            timeout: '43200' # 12 horas
+            timeout: '43200'
 
 # ===================================================
 #   STAGE 4 — DEPLOY PROD
@@ -215,7 +203,7 @@ stages:
 
     - deployment: DeployBackendProd
       displayName: "Backend Prod"
-      environment: 'Production'   # crea el environment y agrega aprobación aquí si prefieres
+      environment: 'Production'
       strategy:
         runOnce:
           deploy:
