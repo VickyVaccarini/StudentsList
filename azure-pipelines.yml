@@ -5,8 +5,6 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-- group: backend-qa-db
-- group: frontend-qa-db
 
 - name: serviceConnection
   value: ServiceConnectionARM
