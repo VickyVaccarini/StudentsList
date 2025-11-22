@@ -1,26 +1,27 @@
 import axios from 'axios';
 
-const STUDENT_API_BASE_URL = 'http://localhost:8080/api/v1/students';
+// Lee la variable REACT_APP_API_BASE del entorno (inyectada por Azure DevOps)
+const BASE = process.env.REACT_APP_API_BASE;
 
 class StudentService {
     getStudents() {
-        return axios.get(STUDENT_API_BASE_URL);
+        return axios.get(BASE);
     }
 
     createStudent(student) {
-        return axios.post(STUDENT_API_BASE_URL, student);
+        return axios.post(BASE, student);
     }
 
     getStudentById(studentId) {
-        return axios.get(`${STUDENT_API_BASE_URL}/${studentId}`);
+        return axios.get(`${BASE}/${studentId}`);
     }
 
     updateStudent(student, studentId) {
-        return axios.put(`${STUDENT_API_BASE_URL}/${studentId}`, student);
+        return axios.put(`${BASE}/${studentId}`, student);
     }
 
     deleteStudent(studentId) {
-        return axios.delete(`${STUDENT_API_BASE_URL}/${studentId}`);
+        return axios.delete(`${BASE}/${studentId}`);
     }
 }
 
