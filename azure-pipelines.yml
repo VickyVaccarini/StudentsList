@@ -173,6 +173,7 @@ stages:
             azureSubscription: '$(serviceConnection)'
             appName: '$(frontendAppQa)'
             package: '$(Pipeline.Workspace)/frontend-qa-build/frontend-qa.zip'
+            deploymentMethod: 'zipDeploy'
 
 # ===================================================
 #   STAGE 3 — APROBACIÓN MANUAL
@@ -242,3 +243,4 @@ stages:
                   azureSubscription: '$(serviceConnection)'
                   appName: '$(frontendAppProd)'
                   package: '$(Pipeline.Workspace)/frontend-prod-build/frontend-prod.zip'
+                  deploymentMethod: 'zipDeploy'
