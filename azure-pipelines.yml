@@ -25,7 +25,7 @@ variables:
 - name: javaVersion
   value: '17'
 - name: nodeVersion
-  value: '20.x'
+  value: '16.x'     # CAMBIO: React Scripts 3.4.1 solo funciona con Node 16
 
 stages:
 
@@ -82,7 +82,7 @@ stages:
         - checkout: self
         - task: NodeTool@0
           inputs:
-            versionSpec: '$(nodeVersion)'
+            versionSpec: '$(nodeVersion)'   # 👈 AHORA NODE 16
 
         # ❌ TESTS FRONTEND DESHABILITADOS
         # - script: |
