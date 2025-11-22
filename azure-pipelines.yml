@@ -148,6 +148,7 @@ stages:
         - task: DownloadBuildArtifacts@0
           inputs:
             buildType: current
+            artifactName: backend-jar
             downloadPath: '$(Pipeline.Workspace)'
 
         - task: AzureWebApp@1
@@ -165,6 +166,7 @@ stages:
         - task: DownloadBuildArtifacts@0
           inputs:
             buildType: current
+            artifactName: frontend-qa-build
             downloadPath: '$(Pipeline.Workspace)'
 
         - task: AzureWebApp@1
@@ -211,6 +213,7 @@ stages:
               - task: DownloadBuildArtifacts@0
                 inputs:
                   buildType: current
+                  artifactName: backend-jar
                   downloadPath: '$(Pipeline.Workspace)'
 
               - task: AzureWebApp@1
@@ -232,6 +235,7 @@ stages:
               - task: DownloadBuildArtifacts@0
                 inputs:
                   buildType: current
+                  artifactName: frontend-prod-build
                   downloadPath: '$(Pipeline.Workspace)'
 
               - task: AzureWebApp@1
