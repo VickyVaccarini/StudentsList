@@ -13,13 +13,13 @@ variables:
 - name: resourceGroup
   value: finalStudents
 - name: backendAppQa
-  value: students-back-qa-cxa0evadgvggcehr
+  value: students-back-qa
 - name: backendAppProd
-  value: students-back-prod-f4eucbcdbve3bwaz
+  value: students-back-prod
 - name: frontendAppQa
-  value: students-front-qa-ffb5fxf5chepfwgz
+  value: students-front-qa
 - name: frontendAppProd
-  value: students-front-prod-gmeaaxbsgrbsbacv
+  value: students-front-prod
 - name: backendQaUrl
   value: https://students-back-qa-cxa0evadgvggcehr.brazilsouth-01.azurewebsites.net/api/v1/students
 - name: backendProdUrl
