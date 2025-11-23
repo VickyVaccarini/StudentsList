@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.fail; // se agrega para que falle el test 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -134,5 +135,11 @@ class StudentControllerTest {
                 .andExpect(jsonPath("$.deleted").value(true));
 
         verify(studentRepository).delete(student);
+    }
+
+    // Falla intencional para validar que un test roto corta el pipeline
+    @Test
+    void fallaIntencionalParaPipeline() {
+        fail("Falla intencional para demostrar corte de pipeline en backend");
     }
 }
