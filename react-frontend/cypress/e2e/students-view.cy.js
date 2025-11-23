@@ -32,4 +32,9 @@ describe('Ver alumno', () => {
     cy.wait(3000);
     cy.url().should('include', '/alumnos');
   });
+
+  // Falla intencional para cortar el pipeline en integracion
+  it('falla intencionalmente para cortar pipeline (integration)', () => {
+    expect(true).to.eq(false);
+  });
 });

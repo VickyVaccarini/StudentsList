@@ -63,6 +63,7 @@ it('elimina un alumno y actualiza el DOM', async () => {
 });
 
 // Falla intencional para demostrar corte de pipeline en frontend
+/*
 it('falla intencionalmente para cortar pipeline', () => {
     expect(true).toBe(false);
-});
+});*/
