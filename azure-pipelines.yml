@@ -1,11 +1,13 @@
 trigger:
 - main
 
+pr:
+- main
+
 pool:
   vmImage: ubuntu-latest
 
 variables:
-
 - name: serviceConnection
   value: ServiceConnectionARM
 - name: resourceGroup
@@ -25,15 +27,15 @@ variables:
 - name: javaVersion
   value: '17'
 - name: nodeVersion
-  value: '16.x'     # CAMBIO: React Scripts 3.4.1 solo funciona con Node 16
+  value: '16.x'     # React Scripts 3.4.1 funciona con Node 16
 
 stages:
 
 # ===================================================
-#   STAGE 1 — BUILD (SIN TESTS)
+#   STAGE 1 - BUILD Y TESTS
 # ===================================================
 - stage: BuildAndTest
-  displayName: "Build sin tests"
+  displayName: "Build y tests"
   jobs:
 
     # -------- BACKEND --------
@@ -42,31 +44,20 @@ stages:
       steps:
         - checkout: self
 
-        # ❌ TESTS DESHABILITADOS
-        # - task: Maven@4
-        #   displayName: "mvn clean test (con jacoco)"
-        #   inputs:
-        #     mavenPomFile: springboot-backend/pom.xml
-        #     goals: clean test
-        #     publishJUnitResults: true
-        #     testResultsFiles: '**/target/surefire-reports/*.xml'
-        #     jdkVersionOption: '1.17'
+        - task: Maven@4
+          displayName: "Tests backend"
+          inputs:
+            mavenPomFile: springboot-backend/pom.xml
+            goals: clean test
+            publishJUnitResults: true
+            testResultsFiles: '**/target/surefire-reports/*.xml'
+            jdkVersionOption: '1.17'
 
-        # ❌ COBERTURA DESHABILITADA
-        # - task: PublishCodeCoverageResults@2
-        #   displayName: "Cobertura backend (JaCoCo)"
-        #   inputs:
-        #     codeCoverageTool: JaCoCo
-        #     summaryFileLocation: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco/jacoco.xml'
-        #     reportDirectory: '$(System.DefaultWorkingDirectory)/springboot-backend/target/site/jacoco'
-        #     failIfCoverageEmpty: false
-
-        # ✔ SOLO COMPILA Y EMPAQUETA
         - task: Maven@4
           displayName: "Empaquetar Backend (sin tests)"
           inputs:
             mavenPomFile: springboot-backend/pom.xml
-            goals: clean package -DskipTests
+            goals: package -DskipTests
             jdkVersionOption: '1.17'
 
         - task: PublishBuildArtifacts@1
@@ -82,35 +73,24 @@ stages:
         - checkout: self
         - task: NodeTool@0
           inputs:
-            versionSpec: '$(nodeVersion)'   # 👈 AHORA NODE 16
+            versionSpec: '$(nodeVersion)'
 
-        # ❌ TESTS FRONTEND DESHABILITADOS
-        # - script: |
-        #     cd react-frontend
-        #     npm ci
-        #     npm run test:coverage -- --coverageReporters=cobertura
-        #   displayName: "Tests + cobertura frontend"
-
-        # ❌ COBERTURA DESHABILITADA
-        # - task: PublishCodeCoverageResults@2
-        #   displayName: "Cobertura frontend (Jest)"
-        #   inputs:
-        #     codeCoverageTool: Cobertura
-        #     summaryFileLocation: '$(System.DefaultWorkingDirectory)/react-frontend/coverage/cobertura-coverage.xml'
-        #     reportDirectory: '$(System.DefaultWorkingDirectory)/react-frontend/coverage'
-        #     failIfCoverageEmpty: false
-
-        # ✔ BUILD QA
         - script: |
             cd react-frontend
             npm ci
+            npm run test -- --watch=false --ci
+          displayName: "Tests frontend"
+
+        # BUILD QA
+        - script: |
+            cd react-frontend
             REACT_APP_API_BASE=$(backendQaUrl) npm run build
             mkdir -p $(Build.ArtifactStagingDirectory)/front
             cd build
             zip -r $(Build.ArtifactStagingDirectory)/front/frontend-qa.zip .
           displayName: "Build frontend QA"
 
-        # ✔ BUILD PROD
+        # BUILD PROD
         - script: |
             cd react-frontend
             rm -rf build
@@ -132,7 +112,7 @@ stages:
             ArtifactName: 'frontend-prod-build'
 
 # ===================================================
-#   STAGE 2 — DEPLOY QA
+#   STAGE 2 - DEPLOY QA
 # ===================================================
 - stage: DeployQA
   displayName: "Deploy QA"
@@ -176,28 +156,28 @@ stages:
             deploymentMethod: 'zipDeploy'
 
 # ===================================================
-#   STAGE 3 — APROBACIÓN MANUAL
+#   STAGE 3 - APROBACION MANUAL
 # ===================================================
 - stage: ManualApproval
-  displayName: "Aprobación manual para Prod"
+  displayName: "Aprobacion manual para Prod"
   dependsOn: DeployQA
   condition: succeeded()
   jobs:
     - job: WaitForApproval
-      displayName: "Esperando aprobación…"
+      displayName: "Esperando aprobacion"
       pool: server
       steps:
         - task: ManualValidation@0
           inputs:
-            instructions: "Aprobar despliegue a Producción."
+            instructions: "Aprobar despliegue a Produccion."
             onTimeout: 'reject'
             timeout: '43200'
 
 # ===================================================
-#   STAGE 4 — DEPLOY PROD
+#   STAGE 4 - DEPLOY PROD
 # ===================================================
 - stage: DeployProd
-  displayName: "Deploy Producción"
+  displayName: "Deploy Produccion"
   dependsOn: ManualApproval
   condition: succeeded()
   jobs:
