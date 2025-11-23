@@ -78,7 +78,7 @@ stages:
         - script: |
             cd react-frontend
             npm ci
-            npm run test -- --watch=false --ci
+            CI=true npm run test -- --watch=false --ci --runInBand --all
           displayName: "Tests frontend"
 
         # BUILD QA
