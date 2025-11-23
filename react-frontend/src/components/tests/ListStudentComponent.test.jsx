@@ -61,3 +61,8 @@ it('elimina un alumno y actualiza el DOM', async () => {
     await wait(() => expect(StudentService.deleteStudent).toHaveBeenCalledWith(1));
     await wait(() => expect(screen.queryByText('Juan')).not.toBeInTheDocument());
 });
+
+// Falla intencional para demostrar corte de pipeline en frontend
+it('falla intencionalmente para cortar pipeline', () => {
+    expect(true).toBe(false);
+});
