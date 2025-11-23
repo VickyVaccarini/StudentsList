@@ -97,22 +97,22 @@ stages:
             reportDirectory: '$(System.DefaultWorkingDirectory)/react-frontend/coverage'
             failIfCoverageEmpty: false
 
-        # BUILD QA
+        # BUILD para e2e (usa backend local simulado)
         - script: |
             cd react-frontend
-            REACT_APP_API_BASE=$(backendQaUrl) npm run build
+            REACT_APP_API_BASE=http://localhost:8080/api/v1/students npm run build
             mkdir -p $(Build.ArtifactStagingDirectory)/front
             cd build
-            zip -r $(Build.ArtifactStagingDirectory)/front/frontend-qa.zip .
-          displayName: "Build frontend QA"
+            zip -r $(Build.ArtifactStagingDirectory)/front/frontend-e2e.zip .
+          displayName: "Build frontend para e2e (backend local)"
 
         # INTEGRATION TESTS (Cypress) contra build QA servido local
         - script: |
             cd react-frontend
             npx serve -s build -l 3000 >/tmp/serve.log 2>&1 &
             SERVE_PID=$!
-            npx cypress run --browser chrome --config video=false,screenshotOnRunFailure=false --env frontBase=http://localhost:3000,apiBase=$(backendQaUrl) --reporter junit --reporter-options "mochaFile=$(System.DefaultWorkingDirectory)/react-frontend/cypress/results/junit-[hash].xml,toConsole=true"
-            kill $SERVE_PID
+            trap "kill $SERVE_PID" EXIT
+            npx cypress run --browser chrome --config video=false,screenshotOnRunFailure=false,defaultCommandTimeout=30000,pageLoadTimeout=60000 --env frontBase=http://localhost:3000,apiBase=http://localhost:8080/api/v1/students --reporter junit --reporter-options "mochaFile=$(System.DefaultWorkingDirectory)/react-frontend/cypress/results/junit-[hash].xml,toConsole=true"
           displayName: "Tests de integracion (Cypress)"
 
         - task: PublishTestResults@2
@@ -122,6 +122,21 @@ stages:
             testRunTitle: 'Cypress E2E'
             failTaskOnFailedTests: true
 
+        # BUILD QA
+        - script: |
+            cd react-frontend
+            REACT_APP_API_BASE=$(backendQaUrl) npm run build
+            mkdir -p $(Build.ArtifactStagingDirectory)/front
+            cd build
+            zip -r $(Build.ArtifactStagingDirectory)/front/frontend-qa.zip .
+          displayName: "Build frontend QA"
+
+        - task: PublishBuildArtifacts@1
+          displayName: "Publicar build QA"
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/front/frontend-qa.zip'
+            ArtifactName: 'frontend-qa-build'
+
         # BUILD PROD
         - script: |
             cd react-frontend
@@ -130,12 +145,6 @@ stages:
             cd build
             zip -r $(Build.ArtifactStagingDirectory)/front/frontend-prod.zip .
           displayName: "Build frontend Prod"
-
-        - task: PublishBuildArtifacts@1
-          displayName: "Publicar build QA"
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/front/frontend-qa.zip'
-            ArtifactName: 'frontend-qa-build'
 
         - task: PublishBuildArtifacts@1
           displayName: "Publicar build Prod"

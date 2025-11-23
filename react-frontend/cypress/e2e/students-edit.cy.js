@@ -1,6 +1,7 @@
 // Editar alumno con esperas extra y mocks que cambian despues de actualizar
-const API_BASE = 'http://localhost:8080/api/v1/students';
-const API_REGEX = /\/api\/v1\/students.*/;
+const API_BASE = Cypress.env('apiBase') || 'http://localhost:8080/api/v1/students';
+const FRONT_BASE = Cypress.env('frontBase') || 'http://localhost:3000';
+const API_REGEX = new RegExp(`${API_BASE.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}.*`);
 
 describe('Editar alumno', () => {
   const listBase = [
@@ -24,7 +25,7 @@ describe('Editar alumno', () => {
       req.reply({ body: alumnoEditado });
     }).as('updateAlumno');
 
-    cy.visit('http://localhost:3000/alumnos');
+    cy.visit(`${FRONT_BASE}/alumnos`);
     cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
     cy.wait(3000);

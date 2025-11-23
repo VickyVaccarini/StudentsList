@@ -1,5 +1,7 @@
 // Eliminar alumno con esperas extra para entornos lentos
-const API_URL = 'http://localhost:8080/api/v1/students';
+const API_BASE = Cypress.env('apiBase') || 'http://localhost:8080/api/v1/students';
+const FRONT_BASE = Cypress.env('frontBase') || 'http://localhost:3000';
+const API_REGEX = new RegExp(`${API_BASE.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}.*`);
 
 describe('Eliminar alumno', () => {
   const listBase = [
@@ -8,10 +10,10 @@ describe('Eliminar alumno', () => {
   ];
 
   it('elimina un alumno del listado', () => {
-    cy.intercept('GET', API_URL, { body: listBase }).as('getList');
-    cy.intercept('DELETE', `${API_URL}/1`, { statusCode: 200, body: { deleted: true } }).as('deleteAlumno');
+    cy.intercept('GET', API_REGEX, { body: listBase }).as('getList');
+    cy.intercept('DELETE', `${API_BASE}/1`, { statusCode: 200, body: { deleted: true } }).as('deleteAlumno');
 
-    cy.visit('http://localhost:3000/alumnos');
+    cy.visit(`${FRONT_BASE}/alumnos`);
     cy.wait(3000);
     cy.wait('@getList');
     cy.wait(3000);
