@@ -1,6 +1,7 @@
 // Crear alumno con esperas extra para estabilidad en pipelines lentos
-const API_BASE = 'http://localhost:8080/api/v1/students';
-const API_REGEX = /\/api\/v1\/students.*/;
+const API_BASE = Cypress.env('apiBase') || 'http://localhost:8080/api/v1/students';
+const FRONT_BASE = Cypress.env('frontBase') || 'http://localhost:3000';
+const API_REGEX = new RegExp(`${API_BASE.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}.*`);
 
 describe('Crear alumno', () => {
   const listBase = [
@@ -23,28 +24,28 @@ describe('Crear alumno', () => {
       req.reply({ statusCode: 201, body: nuevo });
     }).as('crearAlumno');
 
-    cy.visit('http://localhost:3000/alumnos');
-    cy.wait(1500);
+    cy.visit(`${FRONT_BASE}/alumnos`);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1500);
+    cy.wait(3000);
 
     cy.contains('+ Agregar alumno').click();
-    cy.wait(800);
+    cy.wait(3000);
 
     cy.get('input[name="firstName"]').type('Perla');
-    cy.wait(600);
+    cy.wait(3000);
     cy.get('input[name="lastName"]').type('Herrera');
-    cy.wait(600);
+    cy.wait(3000);
     cy.get('input[name="emailId"]').type('perla@test.com');
-    cy.wait(600);
+    cy.wait(3000);
 
     cy.contains('Guardar cambios').click();
-    cy.wait(1000);
+    cy.wait(3000);
 
     cy.wait('@crearAlumno', { timeout: 20000 });
-    cy.wait(1200);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1200);
+    cy.wait(3000);
 
     cy.contains('Perla');
     cy.contains('Herrera');

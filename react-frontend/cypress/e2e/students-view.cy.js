@@ -13,14 +13,14 @@ describe('Ver alumno', () => {
     cy.intercept('GET', `${API_BASE}/1`, { body: listBase[0] }).as('getAlumno');
 
     cy.visit('http://localhost:3000/alumnos');
-    cy.wait(1500);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1500);
+    cy.wait(3000);
 
     cy.contains('Ver').first().click();
-    cy.wait(800);
+    cy.wait(3000);
     cy.wait('@getAlumno', { timeout: 20000 });
-    cy.wait(800);
+    cy.wait(3000);
 
     cy.contains('Detalle del alumno');
     cy.contains('Juan');
@@ -28,7 +28,7 @@ describe('Ver alumno', () => {
     cy.contains('juan@test.com');
 
     cy.contains('Volver al listado').click();
-    cy.wait(1000);
+    cy.wait(3000);
     cy.url().should('include', '/alumnos');
   });
 });

@@ -17,15 +17,15 @@ describe('Validaciones de formulario', () => {
     }).as('crearAlumno');
 
     cy.visit('http://localhost:3000/alumnos');
-    cy.wait(1200);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1200);
+    cy.wait(3000);
 
     cy.contains('+ Agregar alumno').click();
-    cy.wait(800);
+    cy.wait(3000);
 
     cy.contains('Guardar cambios').click();
-    cy.wait(1000);
+    cy.wait(3000);
 
     cy.url().should('include', '/guardar-alumno/_add');
     cy.get('@postSpy').its('callCount').should('eq', 0);
@@ -40,25 +40,25 @@ describe('Validaciones de formulario', () => {
     }).as('crearAlumnoInvalid');
 
     cy.visit('http://localhost:3000/alumnos');
-    cy.wait(1200);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1200);
+    cy.wait(3000);
 
     cy.contains('+ Agregar alumno').click();
-    cy.wait(800);
+    cy.wait(3000);
 
     cy.get('input[name=\"firstName\"]').type('SinMail');
-    cy.wait(400);
+    cy.wait(3000);
     cy.get('input[name=\"lastName\"]').type('Prueba');
-    cy.wait(400);
+    cy.wait(3000);
     cy.get('input[name=\"emailId\"]').type('correo-invalido');
-    cy.wait(400);
+    cy.wait(3000);
 
     cy.get('body').click(10, 10);
-    cy.wait(300);
+    cy.wait(3000);
 
     cy.contains('Guardar cambios').click();
-    cy.wait(1000);
+    cy.wait(3000);
 
 
     cy.url().should('include', '/guardar-alumno/_add');

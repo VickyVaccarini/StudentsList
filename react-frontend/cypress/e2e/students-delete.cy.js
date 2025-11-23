@@ -12,17 +12,17 @@ describe('Eliminar alumno', () => {
     cy.intercept('DELETE', `${API_URL}/1`, { statusCode: 200, body: { deleted: true } }).as('deleteAlumno');
 
     cy.visit('http://localhost:3000/alumnos');
-    cy.wait(500);
+    cy.wait(3000);
     cy.wait('@getList');
-    cy.wait(500);
+    cy.wait(3000);
 
     cy.contains('Juan').parents('tr').within(() => {
       cy.contains('Eliminar').click();
     });
-    cy.wait(400);
+    cy.wait(3000);
 
     cy.wait('@deleteAlumno');
-    cy.wait(500);
+    cy.wait(3000);
 
     cy.contains('Juan').should('not.exist');
   });

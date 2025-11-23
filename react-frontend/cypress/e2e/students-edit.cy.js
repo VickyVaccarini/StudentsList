@@ -25,24 +25,24 @@ describe('Editar alumno', () => {
     }).as('updateAlumno');
 
     cy.visit('http://localhost:3000/alumnos');
-    cy.wait(1500);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1500);
+    cy.wait(3000);
 
     cy.contains('Editar').click();
-    cy.wait(800);
+    cy.wait(3000);
 
     cy.wait('@getAlumno', { timeout: 20000 });
-    cy.wait(600);
+    cy.wait(3000);
     cy.get('input[name="lastName"]').clear().type('Actualizado');
-    cy.wait(600);
+    cy.wait(3000);
     cy.contains('Guardar cambios').click();
-    cy.wait(1000);
+    cy.wait(3000);
 
     cy.wait('@updateAlumno', { timeout: 20000 });
-    cy.wait(1200);
+    cy.wait(3000);
     cy.wait('@getList', { timeout: 20000 });
-    cy.wait(1200);
+    cy.wait(3000);
 
     cy.contains('Actualizado');
     cy.contains('juan@nuevo.com');
