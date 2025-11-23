@@ -34,7 +34,9 @@ describe('Ver alumno', () => {
   });
 
   // Falla intencional para cortar el pipeline en integracion
+  /*
   it('falla intencionalmente para cortar pipeline (integration)', () => {
     expect(true).to.eq(false);
   });
+  */
 });
