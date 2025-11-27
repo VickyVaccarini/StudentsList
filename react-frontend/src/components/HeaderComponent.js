@@ -7,7 +7,7 @@ class HeaderComponent extends Component {
                 <nav className="navbar navbar-expand-md navbar-dark">
                     <div>
                         <a href="/" className="navbar-brand">
-                            Gestión de Alumnos - QA Test
+                            Gestión de Alumnos
                         </a>
                     </div>
                 </nav>
